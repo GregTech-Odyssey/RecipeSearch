@@ -1,6 +1,7 @@
 package com.gto.recipesearch;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -25,6 +26,7 @@ public class IteratorUtil {
 
             @Override
             public T next() {
+                if (iterator == null) iterator = iteratorSupplier.get();
                 return iterator.next();
             }
         };
@@ -34,18 +36,25 @@ public class IteratorUtil {
         return new Iterator<R>() {
 
             private R next;
+            private boolean hasNext;
 
             @Override
             public boolean hasNext() {
+                if (hasNext) return true;
                 while (iterator.hasNext()) {
                     next = mapFunction.apply(iterator.next());
-                    if (next != null) return true;
+                    if (next != null) {
+                        hasNext = true;
+                        return true;
+                    }
                 }
                 return false;
             }
 
             @Override
             public R next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                hasNext = false;
                 return next;
             }
         };
@@ -55,12 +64,15 @@ public class IteratorUtil {
         return new Iterator<T>() {
 
             private T next;
+            private boolean hasNext;
 
             @Override
             public boolean hasNext() {
+                if (hasNext) return true;
                 while (iterator.hasNext()) {
                     next = iterator.next();
                     if (predicate.test(next)) {
+                        hasNext = true;
                         return true;
                     }
                 }
@@ -69,6 +81,8 @@ public class IteratorUtil {
 
             @Override
             public T next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                hasNext = false;
                 return next;
             }
         };
