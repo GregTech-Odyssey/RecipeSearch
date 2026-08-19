@@ -22,6 +22,14 @@ public class IntLongMap extends Int2LongOpenHashMap {
         }
 
         @Override
+        public void setAll(IntLongMap map) {
+        }
+
+        @Override
+        public void set(final int k, final long v) {
+        }
+
+        @Override
         public void copyTo(IntLongMap map) {
         }
 
@@ -109,6 +117,30 @@ public class IntLongMap extends Int2LongOpenHashMap {
         if (this.size++ >= this.maxFill) rehash(HashCommon.arraySize(this.size + 1, this.f));
     }
 
+    /**
+     * Set (overwrite) a key with the given value. If the key already exists its value is
+     * replaced; otherwise the entry is inserted. Unlike {@link #add}, this does not combine
+     * amounts, so distinct virtual items mapping to the same key will not be double-counted.
+     */
+    public void set(final int k, final long v) {
+        if (k == 0) return;
+        int pos;
+        int curr;
+        final int[] key = this.key;
+        if ((curr = key[pos = HashCommon.mix(k) & this.mask]) != 0) {
+            do {
+                if (curr == k) {
+                    value[pos] = v;
+                    return;
+                }
+            }
+            while ((curr = key[pos = (pos + 1) & this.mask]) != 0);
+        }
+        key[pos] = k;
+        value[pos] = v;
+        if (this.size++ >= this.maxFill) rehash(HashCommon.arraySize(this.size + 1, this.f));
+    }
+
     public void putAll(IntLongMap map) {
         final int size = map.size;
         if (size == 0) return;
@@ -120,6 +152,26 @@ public class IntLongMap extends Int2LongOpenHashMap {
             int k = key[pos];
             if (k != 0) {
                 this.add(k, value[pos]);
+                if (++i == size) break;
+            }
+        }
+    }
+
+    /**
+     * Batch set: overwrite the entries of {@code map} into this map (merge with
+     * set/overwrite semantics instead of accumulate). Entries already present are replaced.
+     */
+    public void setAll(IntLongMap map) {
+        final int size = map.size;
+        if (size == 0) return;
+        final int[] key = map.key;
+        final long[] value = map.value;
+        int pos = map.n;
+        int i = 0;
+        while (pos-- != 0) {
+            int k = key[pos];
+            if (k != 0) {
+                this.set(k, value[pos]);
                 if (++i == size) break;
             }
         }
