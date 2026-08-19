@@ -26,6 +26,10 @@ public class IntLongMap extends Int2LongOpenHashMap {
         }
 
         @Override
+        public void setTo(IntLongMap target) {
+        }
+
+        @Override
         public void set(final int k, final long v) {
         }
 
@@ -98,6 +102,10 @@ public class IntLongMap extends Int2LongOpenHashMap {
         return false;
     }
 
+    /**
+     * Add {@code incr} to the value of {@code k} (insert as {@code incr} if absent).
+     * Overflows are clamped to {@code Long.MAX_VALUE}.
+     */
     public void add(final int k, final long incr) {
         if (k == 0 || incr == 0) return;
         int pos;
@@ -141,6 +149,10 @@ public class IntLongMap extends Int2LongOpenHashMap {
         if (this.size++ >= this.maxFill) rehash(HashCommon.arraySize(this.size + 1, this.f));
     }
 
+    /**
+     * Batch merge {@code map} into this map with <b>accumulate</b> semantics
+     * (identical to {@link #setAll} except amounts are added, not overwritten).
+     */
     public void putAll(IntLongMap map) {
         final int size = map.size;
         if (size == 0) return;
@@ -177,6 +189,11 @@ public class IntLongMap extends Int2LongOpenHashMap {
         }
     }
 
+    /**
+     * Merge this map's entries into {@code map} using <b>accumulate</b> semantics
+     * (amounts are added to already-present keys). This is the default merge used by
+     * recipes when multiple sources contribute to a shared ingredient count.
+     */
     public void copyTo(IntLongMap map) {
         final int size = this.size;
         if (size == 0) return;
@@ -188,6 +205,26 @@ public class IntLongMap extends Int2LongOpenHashMap {
             int k = key[pos];
             if (k != 0) {
                 map.add(k, value[pos]);
+                if (++i == size) break;
+            }
+        }
+    }
+
+    /**
+     * Batch set this map's entries into {@code target} with overwrite semantics
+     * (inverse direction of {@link #setAll}). Short-circuits when this map is empty.
+     */
+    public void setTo(IntLongMap target) {
+        final int size = this.size;
+        if (size == 0) return;
+        final int[] key = this.key;
+        final long[] value = this.value;
+        int pos = this.n;
+        int i = 0;
+        while (pos-- != 0) {
+            int k = key[pos];
+            if (k != 0) {
+                target.set(k, value[pos]);
                 if (++i == size) break;
             }
         }
