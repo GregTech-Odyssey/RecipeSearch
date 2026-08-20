@@ -1,9 +1,12 @@
 plugins {
     id 'java'
+    id 'maven-publish'
+    alias libs.plugins.spotless
+    alias libs.plugins.gtopublishgradleplugin
 }
 
 group = 'com.gto.recipesearch'
-version = '26.1'
+version = '26.8.1'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(8)
 
@@ -32,4 +35,36 @@ afterEvaluate {
                 'Implementation-Version': version,
         ])
     }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = group
+            artifactId = project.name
+        }
+    }
+    repositories {
+        maven {
+            name = 'gtodysseyRepository'
+            url = 'https://maven.gtodyssey.com/releases'
+            credentials {
+                username = findProperty('gtodysseyRepositoryUsername') ?: ''
+                password = findProperty('gtodysseyRepositoryPassword') ?: ''
+            }
+        }
+    }
+}
+gtoPublish {
+    publishMaven      = true        // 默认 true
+    publishGithub     = false       // 默认 false
+    publishCurseforge = false       // 默认 false
+    mavenRepoName     = 'gtodysseyRepository'  // 默认值
+    mavenRepoUrl      = 'releases'  // 必填，可选值: 'releases' 或 'private'
+    minecraftVersion  = '1.20.1'      // 必填，Minecraft 版本号
+    modLoader         = 'Forge'  // 必填，模组加载器（NeoForge, Forge, Fabric 等）
+    githubRepo        = 'owner/repo-name'      // GitHub 仓库（启用 GitHub 发布时必填）
+    curseforgeProjectId   = '123456'    // CurseForge 项目 ID（启用 CurseForge 时必填）
+    curseforgeJavaVersion = 'Java 21'   // 运行时最低 Java（GTCEu 等依赖要求 21+；开发机可用 Java 25）
 }
