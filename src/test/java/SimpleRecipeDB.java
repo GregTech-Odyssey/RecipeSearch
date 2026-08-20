@@ -141,7 +141,7 @@ public class SimpleRecipeDB extends AbstractRecipeDB<Recipe> {
         List<Recipe> rs = list.intStream().parallel()
                 .mapToObj(i -> db.search(input, ints, predicate))
                 .flatMap(RecipeSearcher::stream)
-                .collect(Collectors.toList());
+                .toList();
         System.out.println(rs.size());
         System.out.println(System.currentTimeMillis() - start);
     }

@@ -1,24 +1,21 @@
 package com.gto.recipesearch;
 
 import it.unimi.dsi.fastutil.HashCommon;
+import it.unimi.dsi.fastutil.ints.Int2LongFunction;
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 
+import java.util.Iterator;
+
 @SuppressWarnings("unused")
-public class IntLongMap extends Int2LongOpenHashMap {
+public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2LongMap.Entry> {
 
     public static final IntLongMap EMPTY = new IntLongMap(0) {
 
-        @Override
-        public long get(final int k) {
-            return 0;
-        }
-
-        public boolean containsKey(final int k) {
-            return false;
-        }
+        private static final int[] EMPTY_INT_ARRAY = new int[0];
 
         @Override
-        public void putAll(IntLongMap map) {
+        public void addAll(IntLongMap map) {
         }
 
         @Override
@@ -26,15 +23,7 @@ public class IntLongMap extends Int2LongOpenHashMap {
         }
 
         @Override
-        public void setTo(IntLongMap target) {
-        }
-
-        @Override
         public void set(final int k, final long v) {
-        }
-
-        @Override
-        public void copyTo(IntLongMap map) {
         }
 
         @Override
@@ -42,12 +31,8 @@ public class IntLongMap extends Int2LongOpenHashMap {
         }
 
         @Override
-        public void copyToArray(int[] key, long[] value) {
-        }
-
-        @Override
         public int[] toIntArray() {
-            return new int[0];
+            return EMPTY_INT_ARRAY;
         }
     };
 
@@ -65,17 +50,17 @@ public class IntLongMap extends Int2LongOpenHashMap {
     }
 
     @Override
-    public long addTo(final int k, final long incr) {
+    public final long addTo(final int k, final long incr) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public long put(final int k, final long v) {
+    public final long put(final int k, final long v) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public long get(final int k) {
+    public final long get(final int k) {
         final int[] key = this.key;
         int curr;
         int pos;
@@ -89,7 +74,7 @@ public class IntLongMap extends Int2LongOpenHashMap {
     }
 
     @Override
-    public boolean containsKey(final int k) {
+    public final boolean containsKey(final int k) {
         final int[] key = this.key;
         int curr;
         int pos;
@@ -153,7 +138,7 @@ public class IntLongMap extends Int2LongOpenHashMap {
      * Batch merge {@code map} into this map with <b>accumulate</b> semantics
      * (identical to {@link #setAll} except amounts are added, not overwritten).
      */
-    public void putAll(IntLongMap map) {
+    public void addAll(IntLongMap map) {
         final int size = map.size;
         if (size == 0) return;
         final int[] key = map.key;
@@ -194,7 +179,7 @@ public class IntLongMap extends Int2LongOpenHashMap {
      * (amounts are added to already-present keys). This is the default merge used by
      * recipes when multiple sources contribute to a shared ingredient count.
      */
-    public void copyTo(IntLongMap map) {
+    public final void addTo(IntLongMap map) {
         final int size = this.size;
         if (size == 0) return;
         final int[] key = this.key;
@@ -214,7 +199,7 @@ public class IntLongMap extends Int2LongOpenHashMap {
      * Batch set this map's entries into {@code target} with overwrite semantics
      * (inverse direction of {@link #setAll}). Short-circuits when this map is empty.
      */
-    public void setTo(IntLongMap target) {
+    public final void setTo(IntLongMap target) {
         final int size = this.size;
         if (size == 0) return;
         final int[] key = this.key;
@@ -230,7 +215,7 @@ public class IntLongMap extends Int2LongOpenHashMap {
         }
     }
 
-    public void copyToArray(int[] ints, long[] longs) {
+    public final void setToArray(int[] ints, long[] longs) {
         final int size = this.size;
         if (size == 0) return;
         final int[] key = this.key;
@@ -261,5 +246,10 @@ public class IntLongMap extends Int2LongOpenHashMap {
             }
         }
         return a;
+    }
+
+    @Override
+    public Iterator<Entry> iterator() {
+        return int2LongEntrySet().fastIterator();
     }
 }

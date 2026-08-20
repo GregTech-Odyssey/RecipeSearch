@@ -7,32 +7,27 @@ public interface Node<T> {
 
     @SuppressWarnings("unchecked")
     static <T> Node<T> recipe(List<Runnable> branchBuilder, Node<T> node, final T value) {
-        if (node instanceof BR) {
-            BR<T> br = (BR<T>) node;
+        if (node instanceof BR<T> br) {
             T[] arr = (T[]) new Object[2];
             arr[0] = br.r;
             arr[1] = value;
             return new BMR<>(branchBuilder, br.b, arr);
-        } else if (node instanceof BMR) {
-            BMR<T> bmr = (BMR<T>) node;
+        } else if (node instanceof BMR<T> bmr) {
             T[] arr = (T[]) new Object[bmr.rs.length + 1];
             System.arraycopy(bmr.rs, 0, arr, 0, bmr.rs.length);
             arr[bmr.rs.length] = value;
             return new BMR<>(branchBuilder, bmr.b, arr);
-        } else if (node instanceof R) {
-            R<T> r = (R<T>) node;
+        } else if (node instanceof R<T> r) {
             T[] arr = (T[]) new Object[2];
             arr[0] = r.r;
             arr[1] = value;
             return new MR<>(arr);
-        } else if (node instanceof MR) {
-            MR<T> mr = (MR<T>) node;
+        } else if (node instanceof MR<T> mr) {
             T[] arr = (T[]) new Object[mr.rs.length + 1];
             System.arraycopy(mr.rs, 0, arr, 0, mr.rs.length);
             arr[mr.rs.length] = value;
             return new MR<>(arr);
-        } else if (node instanceof B) {
-            B<T> b = (B<T>) node;
+        } else if (node instanceof B<T> b) {
             return new BR<>(branchBuilder, b.b, value);
         } else {
             return new R<>(value);
@@ -42,11 +37,9 @@ public interface Node<T> {
     static <T> Node<T> branch(List<Runnable> branchBuilder, Node<T> node) {
         if (node instanceof B || node instanceof BR || node instanceof BMR) {
             return node;
-        } else if (node instanceof R) {
-            R<T> r = (R<T>) node;
+        } else if (node instanceof R<T> r) {
             return new BR<>(branchBuilder, Branch.create(), r.r);
-        } else if (node instanceof MR) {
-            MR<T> mr = (MR<T>) node;
+        } else if (node instanceof MR<T> mr) {
             return new BMR<>(branchBuilder, Branch.create(), mr.rs);
         } else {
             return new B<>(branchBuilder);

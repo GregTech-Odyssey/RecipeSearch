@@ -69,18 +69,11 @@ public interface Branch<R> {
             return this;
         }
 
-        private static final class ArrayBranch<R> implements Branch<R> {
-
-            private final int[] key;
-            private final Node<R>[] value;
-
-            private ArrayBranch(int[] key, Node<R>[] value) {
-                this.key = key;
-                this.value = value;
-            }
+        private record ArrayBranch<R>(int[] key, Node<R>[] value) implements Branch<R> {
 
             @Override
             public Node<R> get(int i) {
+                var key = this.key;
                 int size = key.length;
                 for (int j = 0; j < size; j++) {
                     if (i == key[j]) {
@@ -93,16 +86,6 @@ public interface Branch<R> {
             @Override
             public int size() {
                 return key.length;
-            }
-
-            @Override
-            public int[] key() {
-                return key;
-            }
-
-            @Override
-            public Node<R>[] value() {
-                return value;
             }
         }
     }

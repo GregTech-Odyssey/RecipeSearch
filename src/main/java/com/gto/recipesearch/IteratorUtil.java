@@ -13,7 +13,7 @@ public class IteratorUtil {
     }
 
     public static <T> Iterator<T> lazy(Supplier<Iterator<T>> iteratorSupplier) {
-        return new Iterator<T>() {
+        return new Iterator<>() {
 
             private Iterator<T> iterator = null;
 
@@ -31,7 +31,7 @@ public class IteratorUtil {
     }
 
     public static <T, R> Iterator<R> map(Iterator<T> iterator, Function<T, R> mapFunction) {
-        return new Iterator<R>() {
+        return new Iterator<>() {
 
             private R next;
 
@@ -52,7 +52,7 @@ public class IteratorUtil {
     }
 
     public static <T> Iterator<T> filter(Iterator<T> iterator, Predicate<T> predicate) {
-        return new Iterator<T>() {
+        return new Iterator<>() {
 
             private T next;
 
@@ -75,7 +75,7 @@ public class IteratorUtil {
     }
 
     public static <T> Iterator<T> concat(Iterator<T> first, Iterator<T> second) {
-        return new Iterator<T>() {
+        return new Iterator<>() {
             private Iterator<? extends T> current = first;
 
             @Override

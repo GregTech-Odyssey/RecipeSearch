@@ -31,6 +31,8 @@ public abstract class AbstractRecipeDB<R> {
     protected int maxSearchDepth;
     protected int minParallelThreshold = 1000;
 
+    protected ThreadLocal<RecipeSearcher<R>> recipeSearcher = new ThreadLocal<>();
+
     protected abstract IntLongMap extractIntMap(R recipe);
 
     protected abstract void setRecipeContainer(R recipe, IntMapContainer container);
@@ -39,8 +41,19 @@ public abstract class AbstractRecipeDB<R> {
         return true;
     }
 
+    protected RecipeSearcher<R> getRecipeSearcher() {
+        var searcher = recipeSearcher.get();
+        if (searcher == null) {
+            searcher = new RecipeSearcher<>(this.maxSearchDepth);
+            recipeSearcher.set(searcher);
+        }
+        return searcher;
+    }
+
     public R findAnyMatch(IntLongMap map, int[] searchKeys, Predicate<R> predicate) {
-        R foundRecipe = new RecipeSearcher<>(maxSearchDepth, rootBranch, map, searchKeys, predicate, null).findAny();
+        var searcher = getRecipeSearcher();
+        searcher.reset(maxSearchDepth, rootBranch, map, searchKeys, predicate, null);
+        R foundRecipe = searcher.findAny();
         if (foundRecipe != null) return foundRecipe;
         if (!parallelRecipes.isEmpty()) {
             foundRecipe = findInParallel(parallelRecipes, predicate);
@@ -77,7 +90,9 @@ public abstract class AbstractRecipeDB<R> {
     }
 
     public RecipeSearcher<R> search(IntLongMap map, int[] searchKeys, Predicate<R> predicate) {
-        return new RecipeSearcher<>(maxSearchDepth, rootBranch, map, searchKeys, predicate, createFallbackIterator(predicate));
+        var searcher = getRecipeSearcher();
+        searcher.reset(maxSearchDepth, rootBranch, map, searchKeys, predicate, createFallbackIterator(predicate));
+        return searcher;
     }
 
     protected void finishBuild() {

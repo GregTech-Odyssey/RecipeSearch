@@ -26,7 +26,9 @@ import java.util.function.Consumer;
  */
 public final class SearchFrame<R> {
 
-    /** Shared empty array used as the starting buffer for multi-word skip frames. */
+    /**
+     * Shared empty array used as the starting buffer for multi-word skip frames.
+     */
     private static final long[] EMPTY_LONGS = new long[0];
 
     boolean branchProbe;
@@ -60,30 +62,36 @@ public final class SearchFrame<R> {
         } else {
             // The previous level consumed ints[prev.index]; skip that exact index so the
             // search does not re-pick it while exploring the alternative inputs below.
-            long pw = prev.skipWord;
             if (prev.multi) {
                 // prev is multi-word: give this frame its own buffer. Prefer clone() when
                 // the index already fits (no realloc/zero-fill — faster than copyOf);
                 // only copy + extend when the consumed index needs a longer array.
-                int w = prev.index >>> 6;
-                if (w < prev.skipArr.length) {
-                    this.skipArr = prev.skipArr.clone();
-                } else {
-                    this.skipArr = Arrays.copyOf(prev.skipArr, w + 1);
-                }
-                this.skipWord = pw;
-                this.skipArr[w] |= 1L << (prev.index & 0x3F);
-                this.multi = true;
+                addMulti(prev);
             } else {
                 // prev is single-word; single-word mode was chosen once at the root push
                 // via expectedDepth, so every index here is < 64 — a plain OR, no
                 // allocation, no long->long[] upgrade is ever needed.
-                this.skipWord = pw | (1L << prev.index);
+                this.skipWord = prev.skipWord | (1L << prev.index);
                 this.skipArr = null;
                 this.multi = false;
             }
         }
         this.branch = branch;
+    }
+
+    private void addMulti(SearchFrame<R> prev) {
+        int index = prev.index;
+        int w = index >>> 6;
+        long[] arr = prev.skipArr;
+        if (w < arr.length) {
+            arr = arr.clone();
+        } else {
+            arr = Arrays.copyOf(arr, w + 1);
+        }
+        arr[w] |= 1L << (index & 0x3F);
+        this.skipArr = arr;
+        this.skipWord = 0;
+        this.multi = true;
     }
 
     /**
@@ -125,17 +133,19 @@ public final class SearchFrame<R> {
         final int size = ints.length;
         final Branch<R> branch = this.branch;
         final int depth = searcher.depth;
-        if (multi) {
+        int index = this.index;
+        if (this.multi) {
             // multi-word path
-            final long[] arr = skipArr;
+            final long[] arr = this.skipArr;
+            final int length = arr.length;
             while (index < size) {
                 int w = index >>> 6;
-                if (w >= arr.length || (arr[w] & (1L << (index & 0x3F))) == 0) {
+                if (w >= length || (arr[w] & (1L << (index & 0x3F))) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
                         R result = node.get(searcher, this);
                         if (result != null || searcher.depth != depth) {
-                            index++;
+                            this.index = index + 1;
                             return result;
                         }
                     }
@@ -144,14 +154,14 @@ public final class SearchFrame<R> {
             }
         } else {
             // single-word fast path: all representable indices are < 64
-            final long word = skipWord;
+            final long word = this.skipWord;
             while (index < size) {
                 if ((word & (1L << index)) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
                         R result = node.get(searcher, this);
                         if (result != null || searcher.depth != depth) {
-                            index++;
+                            this.index = index + 1;
                             return result;
                         }
                     }
@@ -159,23 +169,29 @@ public final class SearchFrame<R> {
                 index++;
             }
         }
+        this.index = index;
         searcher.depth--;
         return null;
     }
 
     R searchByBranch(RecipeSearcher<R> searcher) {
         final IntLongMap map = searcher.map;
-        final int[] key = branch.key();
-        final Node<R>[] value = branch.value();
+        final int[] key = this.branch.key();
+        final Node<R>[] value = this.branch.value();
         final int size = key.length;
         final int depth = searcher.depth;
-        int index;
-        while ((index = this.index++) < size) {
+        int index = this.index;
+        while (index < size) {
             if (map.containsKey(key[index])) {
                 R result = value[index].get(searcher, this);
-                if (result != null || searcher.depth != depth) return result;
+                if (result != null || searcher.depth != depth) {
+                    this.index = index + 1;
+                    return result;
+                }
             }
+            index++;
         }
+        this.index = index;
         searcher.depth--;
         return null;
     }
@@ -189,16 +205,17 @@ public final class SearchFrame<R> {
         final int[] ints = searcher.ints;
         final int size = ints.length;
         final Branch<R> branch = this.branch;
-        if (multi) {
+        int index = this.index;
+        if (this.multi) {
             // multi-word path
-            final long[] arr = skipArr;
+            final long[] arr = this.skipArr;
             while (index < size) {
                 int w = index >>> 6;
                 if (w >= arr.length || (arr[w] & (1L << (index & 0x3F))) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
                         if (node.forEach(searcher, this, action)) {
-                            index++;
+                            this.index = index + 1;
                             return;
                         }
                     }
@@ -207,13 +224,13 @@ public final class SearchFrame<R> {
             }
         } else {
             // single-word fast path: all representable indices are < 64
-            final long word = skipWord;
+            final long word = this.skipWord;
             while (index < size) {
                 if ((word & (1L << index)) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
                         if (node.forEach(searcher, this, action)) {
-                            index++;
+                            this.index = index + 1;
                             return;
                         }
                     }
@@ -221,20 +238,26 @@ public final class SearchFrame<R> {
                 index++;
             }
         }
+        this.index = index;
         searcher.depth--;
     }
 
     void forEachByBranch(RecipeSearcher<R> searcher, Consumer<? super R> action) {
         final IntLongMap map = searcher.map;
-        final int[] key = branch.key();
-        final Node<R>[] value = branch.value();
+        final int[] key = this.branch.key();
+        final Node<R>[] value = this.branch.value();
         final int size = key.length;
-        int index;
-        while ((index = this.index++) < size) {
+        int index = this.index;
+        while (index < size) {
             if (map.containsKey(key[index])) {
-                if (value[index].forEach(searcher, this, action)) return;
+                if (value[index].forEach(searcher, this, action)) {
+                    this.index = index + 1;
+                    return;
+                }
             }
+            index++;
         }
+        this.index = index;
         searcher.depth--;
     }
 
