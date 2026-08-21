@@ -30,6 +30,7 @@ public interface Branch<R> {
         @SuppressWarnings("unchecked")
         public Node<R> get(int k) {
             final int[] key = this.key;
+            final int mask = this.mask;
             int curr;
             int pos;
             if ((curr = key[pos = HashCommon.mix(k) & mask]) != 0) {
@@ -37,7 +38,7 @@ public interface Branch<R> {
                     Object[] value = super.value;
                     return (Node<R>) value[pos];
                 }
-                while ((curr = key[pos = (pos + 1) & this.mask]) != 0);
+                while ((curr = key[pos = (pos + 1) & mask]) != 0);
             }
             return null;
         }

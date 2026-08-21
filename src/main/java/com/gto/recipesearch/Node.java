@@ -2,6 +2,7 @@ package com.gto.recipesearch;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public interface Node<T> {
 
@@ -111,10 +112,11 @@ public interface Node<T> {
 
         @Override
         public T get(RecipeSearcher<T> context, SearchFrame<T> frame) {
+            final Predicate<T> predicate = context.predicate;
             int index;
             while ((index = context.count++) < length) {
                 T r = rs[index];
-                if (context.predicate.test(r)) {
+                if (predicate.test(r)) {
                     if (index < length - 1) context.node = this;
                     return r;
                 }
@@ -126,8 +128,9 @@ public interface Node<T> {
 
         @Override
         public boolean forEach(RecipeSearcher<T> context, SearchFrame<T> frame, Consumer<? super T> action) {
+            final Predicate<T> predicate = context.predicate;
             for (T r : rs) {
-                if (context.predicate.test(r)) action.accept(r);
+                if (predicate.test(r)) action.accept(r);
             }
             return false;
         }
@@ -203,8 +206,9 @@ public interface Node<T> {
         @Override
         public boolean forEach(RecipeSearcher<T> context, SearchFrame<T> frame, Consumer<? super T> action) {
             BranchNode.super.forEach(context, frame, action);
+            final Predicate<T> predicate = context.predicate;
             for (T r : rs) {
-                if (context.predicate.test(r)) action.accept(r);
+                if (predicate.test(r)) action.accept(r);
             }
             return true;
         }

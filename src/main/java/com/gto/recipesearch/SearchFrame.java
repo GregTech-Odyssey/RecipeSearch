@@ -176,8 +176,9 @@ public final class SearchFrame<R> {
 
     R searchByBranch(RecipeSearcher<R> searcher) {
         final IntLongMap map = searcher.map;
-        final int[] key = this.branch.key();
-        final Node<R>[] value = this.branch.value();
+        final Branch<R> branch = this.branch;
+        final int[] key = branch.key();
+        final Node<R>[] value = branch.value();
         final int size = key.length;
         final int depth = searcher.depth;
         int index = this.index;
@@ -244,8 +245,9 @@ public final class SearchFrame<R> {
 
     void forEachByBranch(RecipeSearcher<R> searcher, Consumer<? super R> action) {
         final IntLongMap map = searcher.map;
-        final int[] key = this.branch.key();
-        final Node<R>[] value = this.branch.value();
+        final Branch<R> branch = this.branch;
+        final int[] key = branch.key();
+        final Node<R>[] value = branch.value();
         final int size = key.length;
         int index = this.index;
         while (index < size) {

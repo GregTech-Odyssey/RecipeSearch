@@ -62,13 +62,16 @@ public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2Long
     @Override
     public final long get(final int k) {
         final int[] key = this.key;
+        final int mask = this.mask;
         int curr;
         int pos;
         if ((curr = key[pos = HashCommon.mix(k) & mask]) != 0) {
-            do if (curr == k) {
-                return value[pos];
+            do {
+                if (curr == k) {
+                    return value[pos];
+                }
             }
-            while ((curr = key[pos = (pos + 1) & this.mask]) != 0);
+            while ((curr = key[pos = (pos + 1) & mask]) != 0);
         }
         return 0;
     }
@@ -76,13 +79,16 @@ public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2Long
     @Override
     public final boolean containsKey(final int k) {
         final int[] key = this.key;
+        final int mask = this.mask;
         int curr;
         int pos;
         if ((curr = key[pos = HashCommon.mix(k) & mask]) != 0) {
-            do if (curr == k) {
-                return true;
+            do {
+                if (curr == k) {
+                    return true;
+                }
             }
-            while ((curr = key[pos = (pos + 1) & this.mask]) != 0);
+            while ((curr = key[pos = (pos + 1) & mask]) != 0);
         }
         return false;
     }
@@ -96,14 +102,15 @@ public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2Long
         int pos;
         int curr;
         final int[] key = this.key;
-        if ((curr = key[pos = HashCommon.mix(k) & this.mask]) != 0) {
+        final int mask = this.mask;
+        if ((curr = key[pos = HashCommon.mix(k) & mask]) != 0) {
             do if (curr == k) {
                 long v = value[pos] + incr;
                 if (v < 0) v = Long.MAX_VALUE;
                 value[pos] = v;
                 return;
             }
-            while ((curr = key[pos = (pos + 1) & this.mask]) != 0);
+            while ((curr = key[pos = (pos + 1) & mask]) != 0);
         }
         key[pos] = k;
         value[pos] = incr;
@@ -120,14 +127,15 @@ public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2Long
         int pos;
         int curr;
         final int[] key = this.key;
-        if ((curr = key[pos = HashCommon.mix(k) & this.mask]) != 0) {
+        final int mask = this.mask;
+        if ((curr = key[pos = HashCommon.mix(k) & mask]) != 0) {
             do {
                 if (curr == k) {
                     value[pos] = v;
                     return;
                 }
             }
-            while ((curr = key[pos = (pos + 1) & this.mask]) != 0);
+            while ((curr = key[pos = (pos + 1) & mask]) != 0);
         }
         key[pos] = k;
         value[pos] = v;
