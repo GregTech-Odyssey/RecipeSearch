@@ -18,11 +18,33 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
 
+    // JMH 微基准（权威性能测试）：./gradlew jmh
+    testImplementation 'org.openjdk.jmh:jmh-core:1.37'
+    testAnnotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+
     implementation 'it.unimi.dsi:fastutil:8.5.16'
 }
 
 test {
     useJUnitPlatform()
+}
+
+// JMH 基准运行入口。参数可在 BenchmarkRunner 中调整，或用 --args 覆盖：
+//   ./gradlew jmh --args="-i 3 -wi 1 -f 1"
+tasks.register('jmh', JavaExec) {
+    group = 'verification'
+    description = 'Run JMH benchmarks'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.gto.recipesearch.BenchmarkRunner'
+    maxHeapSize = '4g'
+    doFirst {
+        mkdir 'build/reports/jmh'
+    }
+}
+
+java {
+    // 编译后附带生成源码 jar，便于 IDE 调试和 Maven 发布
+    withSourcesJar()
 }
 
 afterEvaluate {

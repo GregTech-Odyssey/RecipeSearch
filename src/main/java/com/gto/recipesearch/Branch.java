@@ -3,6 +3,13 @@ package com.gto.recipesearch;
 import it.unimi.dsi.fastutil.HashCommon;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
+/**
+ * A branch of the recipe trie: maps an ingredient id to the node reachable from it.
+ *
+ * <p>The default {@link HashBranch} is a hash table. After the trie is fully built,
+ * {@link #optimize()} compresses small branches (fewer than 5 entries) into an
+ * {@link HashBranch.ArrayBranch} that is cheaper to scan linearly.
+ */
 public interface Branch<R> {
 
     static <R> Branch<R> create() {
@@ -65,7 +72,8 @@ public interface Branch<R> {
         @SuppressWarnings("unchecked")
         @Override
         public Branch<R> optimize() {
-            if (size == 0) return null;
+            // 空分支保持自身：根分支优化成 null 会让空配方库的搜索直接 NPE
+            if (size == 0) return this;
             if (size < 5) return new ArrayBranch<>(keySet().toIntArray(), values().toArray(new Node[0]));
             return this;
         }

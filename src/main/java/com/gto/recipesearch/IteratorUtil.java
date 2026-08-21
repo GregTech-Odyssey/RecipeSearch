@@ -1,14 +1,17 @@
 package com.gto.recipesearch;
 
 import java.util.Iterator;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+/**
+ * Small iterator utilities: lazily materialized, filtered and concatenated iterators plus
+ * an {@link Iterable} adapter.
+ */
 @SuppressWarnings("unused")
 public class IteratorUtil {
 
-    public static <T> Iterable<T> wrap(Iterator<T> iterator) {
+    public static <T> Iterable<T> asIterable(Iterator<T> iterator) {
         return () -> iterator;
     }
 
@@ -26,27 +29,6 @@ public class IteratorUtil {
             @Override
             public T next() {
                 return iterator.next();
-            }
-        };
-    }
-
-    public static <T, R> Iterator<R> map(Iterator<T> iterator, Function<T, R> mapFunction) {
-        return new Iterator<>() {
-
-            private R next;
-
-            @Override
-            public boolean hasNext() {
-                while (iterator.hasNext()) {
-                    next = mapFunction.apply(iterator.next());
-                    if (next != null) return true;
-                }
-                return false;
-            }
-
-            @Override
-            public R next() {
-                return next;
             }
         };
     }

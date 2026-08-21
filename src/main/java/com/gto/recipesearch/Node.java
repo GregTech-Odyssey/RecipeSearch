@@ -4,46 +4,59 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+/**
+ * A node of the recipe trie. Nodes come in five shapes ({@link RecipeLeaf},
+ * {@link RecipeListLeaf}, {@link BranchOnly}, {@link RecipeBranch}, {@link RecipeListBranch})
+ * that encode whether the node also continues into a sub-branch and how many recipes it
+ * holds directly, instead of using flags or boxed collections.
+ *
+ * <p>{@link #createLeaf} and {@link #createBranch} are the shape transitions applied
+ * while inserting: a leaf recipe becomes {@link RecipeLeaf}; adding another recipe to the
+ * same node merges the lists into {@link RecipeListLeaf}; discovering a child branch
+ * wraps the recipe into {@link RecipeBranch}/{@link RecipeListBranch} (or plain
+ * {@link BranchOnly} when the node only branches). Branch optimizations are queued as
+ * {@link Runnable}s and applied after all insertions.
+ */
 public interface Node<T> {
 
     @SuppressWarnings("unchecked")
-    static <T> Node<T> recipe(List<Runnable> branchBuilder, Node<T> node, final T value) {
-        if (node instanceof BR<T> br) {
+    static <T> Node<T> createLeaf(List<Runnable> branchBuilder, Node<T> node, final T recipe) {
+        if (node instanceof RecipeBranch<T> rb) {
             T[] arr = (T[]) new Object[2];
-            arr[0] = br.r;
-            arr[1] = value;
-            return new BMR<>(branchBuilder, br.b, arr);
-        } else if (node instanceof BMR<T> bmr) {
-            T[] arr = (T[]) new Object[bmr.rs.length + 1];
-            System.arraycopy(bmr.rs, 0, arr, 0, bmr.rs.length);
-            arr[bmr.rs.length] = value;
-            return new BMR<>(branchBuilder, bmr.b, arr);
-        } else if (node instanceof R<T> r) {
+            arr[0] = rb.recipe;
+            arr[1] = recipe;
+            return new RecipeListBranch<>(branchBuilder, rb.branch, arr);
+        } else if (node instanceof RecipeListBranch<T> rlb) {
+            T[] arr = (T[]) new Object[rlb.recipes.length + 1];
+            System.arraycopy(rlb.recipes, 0, arr, 0, rlb.recipes.length);
+            arr[rlb.recipes.length] = recipe;
+            return new RecipeListBranch<>(branchBuilder, rlb.branch, arr);
+        } else if (node instanceof RecipeLeaf<T> r) {
             T[] arr = (T[]) new Object[2];
-            arr[0] = r.r;
-            arr[1] = value;
-            return new MR<>(arr);
-        } else if (node instanceof MR<T> mr) {
-            T[] arr = (T[]) new Object[mr.rs.length + 1];
-            System.arraycopy(mr.rs, 0, arr, 0, mr.rs.length);
-            arr[mr.rs.length] = value;
-            return new MR<>(arr);
-        } else if (node instanceof B<T> b) {
-            return new BR<>(branchBuilder, b.b, value);
+            arr[0] = r.recipe;
+            arr[1] = recipe;
+            return new RecipeListLeaf<>(arr);
+        } else if (node instanceof RecipeListLeaf<T> rl) {
+            T[] arr = (T[]) new Object[rl.recipes.length + 1];
+            System.arraycopy(rl.recipes, 0, arr, 0, rl.recipes.length);
+            arr[rl.recipes.length] = recipe;
+            return new RecipeListLeaf<>(arr);
+        } else if (node instanceof BranchOnly<T> b) {
+            return new RecipeBranch<>(branchBuilder, b.branch, recipe);
         } else {
-            return new R<>(value);
+            return new RecipeLeaf<>(recipe);
         }
     }
 
-    static <T> Node<T> branch(List<Runnable> branchBuilder, Node<T> node) {
-        if (node instanceof B || node instanceof BR || node instanceof BMR) {
+    static <T> Node<T> createBranch(List<Runnable> branchBuilder, Node<T> node) {
+        if (node instanceof BranchOnly || node instanceof RecipeBranch || node instanceof RecipeListBranch) {
             return node;
-        } else if (node instanceof R<T> r) {
-            return new BR<>(branchBuilder, Branch.create(), r.r);
-        } else if (node instanceof MR<T> mr) {
-            return new BMR<>(branchBuilder, Branch.create(), mr.rs);
+        } else if (node instanceof RecipeLeaf<T> r) {
+            return new RecipeBranch<>(branchBuilder, Branch.create(), r.recipe);
+        } else if (node instanceof RecipeListLeaf<T> rl) {
+            return new RecipeListBranch<>(branchBuilder, Branch.create(), rl.recipes);
         } else {
-            return new B<>(branchBuilder);
+            return new BranchOnly<>(branchBuilder);
         }
     }
 
@@ -66,7 +79,7 @@ public interface Node<T> {
         default T get(RecipeSearcher<T> context, SearchFrame<T> frame) {
             int depth = ++context.depth;
             if (depth == context.maxDepth) context.expansion();
-            context.frames[depth].push(branch(), context.ints.length - depth, frame);
+            context.frames[depth].push(branch(), context.inputKeys.length - depth, frame);
             return null;
         }
 
@@ -74,127 +87,144 @@ public interface Node<T> {
         default boolean forEach(RecipeSearcher<T> context, SearchFrame<T> frame, Consumer<? super T> action) {
             int depth = ++context.depth;
             if (depth == context.maxDepth) context.expansion();
-            context.frames[depth].push(branch(), context.ints.length - depth, frame);
+            context.frames[depth].push(branch(), context.inputKeys.length - depth, frame);
             return true;
         }
     }
 
-    class R<T> implements Node<T> {
+    /**
+     * Node holding a single recipe with no child branch.
+     */
+    class RecipeLeaf<T> implements Node<T> {
 
-        final T r;
+        final T recipe;
 
-        R(final T r) {
-            this.r = r;
+        RecipeLeaf(final T recipe) {
+            this.recipe = recipe;
         }
 
         @Override
         public T get(RecipeSearcher<T> context, SearchFrame<T> frame) {
-            if (context.predicate.test(r)) return r;
+            if (context.predicate.test(recipe)) return recipe;
             return null;
         }
 
         @Override
         public boolean forEach(RecipeSearcher<T> context, SearchFrame<T> frame, Consumer<? super T> action) {
-            if (context.predicate.test(r)) action.accept(r);
+            if (context.predicate.test(recipe)) action.accept(recipe);
             return false;
         }
     }
 
-    class MR<T> implements Node<T> {
+    /**
+     * Node holding multiple recipes (sharing the same ingredient prefix) with no child
+     * branch. Recipes are drained one at a time via {@link #get}, keeping a cursor in
+     * {@code context.recipeCursor}.
+     */
+    class RecipeListLeaf<T> implements Node<T> {
 
-        final T[] rs;
+        final T[] recipes;
         private final int length;
 
-        MR(final T[] rs) {
-            this.rs = rs;
-            this.length = rs.length;
+        RecipeListLeaf(final T[] recipes) {
+            this.recipes = recipes;
+            this.length = recipes.length;
         }
 
         @Override
         public T get(RecipeSearcher<T> context, SearchFrame<T> frame) {
             final Predicate<T> predicate = context.predicate;
             int index;
-            while ((index = context.count++) < length) {
-                T r = rs[index];
-                if (predicate.test(r)) {
-                    if (index < length - 1) context.node = this;
-                    return r;
+            while ((index = context.recipeCursor++) < length) {
+                T recipe = recipes[index];
+                if (predicate.test(recipe)) {
+                    if (index < length - 1) context.drainingNode = this;
+                    return recipe;
                 }
             }
-            context.count = 0;
-            context.node = null;
+            context.recipeCursor = 0;
+            context.drainingNode = null;
             return null;
         }
 
         @Override
         public boolean forEach(RecipeSearcher<T> context, SearchFrame<T> frame, Consumer<? super T> action) {
             final Predicate<T> predicate = context.predicate;
-            for (T r : rs) {
-                if (predicate.test(r)) action.accept(r);
+            for (T recipe : recipes) {
+                if (predicate.test(recipe)) action.accept(recipe);
             }
             return false;
         }
 
     }
 
-    final class B<T> implements BranchNode<T> {
+    /**
+     * Node that only descends into a child branch; holds no recipe of its own.
+     */
+    final class BranchOnly<T> implements BranchNode<T> {
 
-        private Branch<T> b;
+        private Branch<T> branch;
 
-        private B(List<Runnable> branchBuilder) {
-            this.b = Branch.create();
-            branchBuilder.add(() -> this.b = this.b.optimize());
+        private BranchOnly(List<Runnable> branchBuilder) {
+            this.branch = Branch.create();
+            branchBuilder.add(() -> this.branch = this.branch.optimize());
         }
 
         @Override
         public Branch<T> branch() {
-            return b;
+            return branch;
         }
     }
 
-    final class BR<T> extends R<T> implements BranchNode<T> {
+    /**
+     * Node holding a single recipe and continuing into a child branch.
+     */
+    final class RecipeBranch<T> extends RecipeLeaf<T> implements BranchNode<T> {
 
-        private Branch<T> b;
+        private Branch<T> branch;
 
-        private BR(List<Runnable> branchBuilder, Branch<T> b, T r) {
-            super(r);
-            this.b = b;
-            branchBuilder.add(() -> this.b = this.b.optimize());
+        private RecipeBranch(List<Runnable> branchBuilder, Branch<T> branch, T recipe) {
+            super(recipe);
+            this.branch = branch;
+            branchBuilder.add(() -> this.branch = this.branch.optimize());
         }
 
         @Override
         public Branch<T> branch() {
-            return b;
+            return branch;
         }
 
         @Override
         public T get(RecipeSearcher<T> context, SearchFrame<T> frame) {
             BranchNode.super.get(context, frame);
-            if (context.predicate.test(r)) return r;
+            if (context.predicate.test(recipe)) return recipe;
             return null;
         }
 
         @Override
         public boolean forEach(RecipeSearcher<T> context, SearchFrame<T> frame, Consumer<? super T> action) {
             BranchNode.super.forEach(context, frame, action);
-            if (context.predicate.test(r)) action.accept(r);
+            if (context.predicate.test(recipe)) action.accept(recipe);
             return true;
         }
     }
 
-    final class BMR<T> extends MR<T> implements BranchNode<T> {
+    /**
+     * Node holding multiple recipes and continuing into a child branch.
+     */
+    final class RecipeListBranch<T> extends RecipeListLeaf<T> implements BranchNode<T> {
 
-        private Branch<T> b;
+        private Branch<T> branch;
 
-        private BMR(List<Runnable> branchBuilder, Branch<T> b, T[] rs) {
-            super(rs);
-            this.b = b;
-            branchBuilder.add(() -> this.b = this.b.optimize());
+        private RecipeListBranch(List<Runnable> branchBuilder, Branch<T> branch, T[] recipes) {
+            super(recipes);
+            this.branch = branch;
+            branchBuilder.add(() -> this.branch = this.branch.optimize());
         }
 
         @Override
         public Branch<T> branch() {
-            return b;
+            return branch;
         }
 
         @Override
@@ -207,8 +237,8 @@ public interface Node<T> {
         public boolean forEach(RecipeSearcher<T> context, SearchFrame<T> frame, Consumer<? super T> action) {
             BranchNode.super.forEach(context, frame, action);
             final Predicate<T> predicate = context.predicate;
-            for (T r : rs) {
-                if (predicate.test(r)) action.accept(r);
+            for (T recipe : recipes) {
+                if (predicate.test(recipe)) action.accept(recipe);
             }
             return true;
         }

@@ -1,12 +1,21 @@
 package com.gto.recipesearch;
 
 import it.unimi.dsi.fastutil.HashCommon;
-import it.unimi.dsi.fastutil.ints.Int2LongFunction;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 
 import java.util.Iterator;
 
+/**
+ * An int→long hash map specialized for recipe search.
+ *
+ * <p>Extends fastutil's {@link Int2LongOpenHashMap} but overrides the hot lookup methods
+ * ({@link #get}, {@link #containsKey}) with inlined open-addressing probes so the common
+ * paths avoid virtual dispatch. Provides two merge semantics: {@code add*} accumulates
+ * amounts (for combining shared ingredients) while {@code set*} overwrites (to avoid
+ * double-counting distinct virtual items), each available as single-key and batched
+ * variants. {@link #EMPTY} is an immutable singleton for callers that have no input.
+ */
 @SuppressWarnings("unused")
 public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2LongMap.Entry> {
 
@@ -223,9 +232,13 @@ public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2Long
         }
     }
 
-    public final void setToArray(int[] ints, long[] longs) {
+    /**
+     * Copy this map's entries into the given parallel arrays ({@code keys}/{@code amounts}),
+     * which must be large enough. Returns the number of entries copied.
+     */
+    public final int copyTo(int[] keys, long[] amounts) {
         final int size = this.size;
-        if (size == 0) return;
+        if (size == 0) return 0;
         final int[] key = this.key;
         final long[] value = this.value;
         int pos = this.n;
@@ -233,11 +246,12 @@ public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2Long
         while (pos-- != 0) {
             int k = key[pos];
             if (k != 0) {
-                ints[i] = k;
-                longs[i] = value[pos];
+                keys[i] = k;
+                amounts[i] = value[pos];
                 if (++i == size) break;
             }
         }
+        return i;
     }
 
     public int[] toIntArray() {
