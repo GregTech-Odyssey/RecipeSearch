@@ -13,8 +13,8 @@ public abstract class AbstractRecipeDB<R> {
 
     public static <R, DB extends AbstractRecipeDB<R>> DB build(DB database, Collection<R> recipes) {
         database.clear();
-        ArrayList<Runnable> branchConstructionTasks = new ArrayList<>(recipes.size());
-        Map<R, Pair<IntLongMap, IntMapContainer>> recipeContainers = new Reference2ReferenceOpenHashMap<>(recipes.size());
+        var branchConstructionTasks = new ArrayList<Runnable>(recipes.size());
+        var recipeContainers = new Reference2ReferenceOpenHashMap<R, Pair<IntLongMap, IntMapContainer>>(recipes.size());
         Int2IntOpenHashMap frequencyMap = new Int2IntOpenHashMap();
         branchConstructionTasks.add(() -> database.rootBranch = database.rootBranch.optimize());
         recipes.forEach(recipe -> database.collectRecipeData(frequencyMap, recipeContainers, recipe));
@@ -109,7 +109,7 @@ public abstract class AbstractRecipeDB<R> {
         }
     }
 
-    protected void collectRecipeData(Int2IntOpenHashMap frequencyMap, Map<R, Pair<IntLongMap, IntMapContainer>> recipeContainers, R recipe) {
+    protected void collectRecipeData(Int2IntOpenHashMap frequencyMap, Reference2ReferenceOpenHashMap<R, Pair<IntLongMap, IntMapContainer>> recipeContainers, R recipe) {
         if (recipe == null) return;
         IntLongMap intMap = extractIntMap(recipe);
         int[] keys = intMap.toIntArray();
