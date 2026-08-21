@@ -90,10 +90,14 @@ MyRecipe any = db.findAnyMatch(inventory, inventory.toIntArray(), predicate);
 - **搜索**：从根分支开始，逐层用背包里的原料探查树；每个帧记录已探索的输入下标（跳位位图），回溯时不会重复访问
 - **校验**：树上候选只是"原料种类都出现过"，真正决定命中与否的是 `IngredientTable.match` 的数量比较
 
+## 作为 Minecraft 模组安装
+
+[Fast-Recipe-Search](https://github.com/nutant233/Fast-Recipe-Search)（包含当前库代码）。
+
 ## 构建与测试
 
 ```bash
-./gradlew build        # 编译 + 单元测试 + 生成 jar / sources jar
+./gradlew build        # 编译 + 单元测试 + 生成库 jar / sources jar
 ./gradlew test         # 仅运行单元测试
 ./gradlew jmh          # 运行 JMH 性能基准（权威测量）
 ```
