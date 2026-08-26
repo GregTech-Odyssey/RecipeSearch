@@ -8,7 +8,7 @@ package com.gto.recipesearch;
  * <p>Serves both as the trie lookup key (the id array) and as the final quantity check
  * ({@link #match}) once a candidate recipe is reached.
  */
-public class IngredientTable {
+public final class IngredientTable {
 
     final int[] ids;
     long[] amounts;
@@ -19,7 +19,7 @@ public class IngredientTable {
 
     /**
      * @return whether the given inventory map satisfies every required amount of this
-     *         recipe
+     * recipe
      */
     public boolean match(IntLongMap inventory) {
         final int[] ids = this.ids;

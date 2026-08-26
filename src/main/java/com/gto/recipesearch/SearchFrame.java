@@ -130,17 +130,17 @@ public final class SearchFrame<R> {
      */
     R searchByInput(RecipeSearcher<R> searcher) {
         final int[] ints = searcher.inputKeys;
-        final int size = ints.length;
+        final int inputLength = ints.length;
         final Branch<R> branch = this.branch;
         final int depth = searcher.depth;
         int index = this.cursor;
         if (this.multiWord) {
             // multi-word path
             final long[] arr = this.skipWords;
-            final int length = arr.length;
-            while (index < size) {
+            final int skipLength = arr.length;
+            while (index < inputLength) {
                 int w = index >>> 6;
-                if (w >= length || (arr[w] & (1L << (index & 0x3F))) == 0) {
+                if (w >= skipLength || (arr[w] & (1L << (index & 0x3F))) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
                         R result = node.get(searcher, this);
@@ -150,12 +150,12 @@ public final class SearchFrame<R> {
                         }
                     }
                 }
-                index++;
+                this.cursor = ++index;
             }
         } else {
             // single-word fast path: all representable indices are < 64
             final long word = this.skipWord;
-            while (index < size) {
+            while (index < inputLength) {
                 if ((word & (1L << index)) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
@@ -166,10 +166,9 @@ public final class SearchFrame<R> {
                         }
                     }
                 }
-                index++;
+                this.cursor = ++index;
             }
         }
-        this.cursor = index;
         searcher.depth--;
         return null;
     }
@@ -190,9 +189,8 @@ public final class SearchFrame<R> {
                     return result;
                 }
             }
-            index++;
+            this.cursor = ++index;
         }
-        this.cursor = index;
         searcher.depth--;
         return null;
     }
@@ -204,15 +202,16 @@ public final class SearchFrame<R> {
      */
     void forEachByInput(RecipeSearcher<R> searcher, Consumer<? super R> action) {
         final int[] ints = searcher.inputKeys;
-        final int size = ints.length;
+        final int inputLength = ints.length;
         final Branch<R> branch = this.branch;
         int index = this.cursor;
         if (this.multiWord) {
             // multi-word path
             final long[] arr = this.skipWords;
-            while (index < size) {
+            final int skipLength = arr.length;
+            while (index < inputLength) {
                 int w = index >>> 6;
-                if (w >= arr.length || (arr[w] & (1L << (index & 0x3F))) == 0) {
+                if (w >= skipLength || (arr[w] & (1L << (index & 0x3F))) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
                         if (node.forEach(searcher, this, action)) {
@@ -221,12 +220,12 @@ public final class SearchFrame<R> {
                         }
                     }
                 }
-                index++;
+                this.cursor = ++index;
             }
         } else {
             // single-word fast path: all representable indices are < 64
             final long word = this.skipWord;
-            while (index < size) {
+            while (index < inputLength) {
                 if ((word & (1L << index)) == 0) {
                     Node<R> node = branch.get(ints[index]);
                     if (node != null) {
@@ -236,10 +235,9 @@ public final class SearchFrame<R> {
                         }
                     }
                 }
-                index++;
+                this.cursor = ++index;
             }
         }
-        this.cursor = index;
         searcher.depth--;
     }
 
@@ -257,9 +255,8 @@ public final class SearchFrame<R> {
                     return;
                 }
             }
-            index++;
+            this.cursor = ++index;
         }
-        this.cursor = index;
         searcher.depth--;
     }
 

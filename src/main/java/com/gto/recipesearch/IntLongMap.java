@@ -17,33 +17,9 @@ import java.util.Iterator;
  * variants. {@link #EMPTY} is an immutable singleton for callers that have no input.
  */
 @SuppressWarnings("unused")
-public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2LongMap.Entry> {
+public sealed class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2LongMap.Entry> {
 
-    public static final IntLongMap EMPTY = new IntLongMap(0) {
-
-        private static final int[] EMPTY_INT_ARRAY = new int[0];
-
-        @Override
-        public void addAll(IntLongMap map) {
-        }
-
-        @Override
-        public void setAll(IntLongMap map) {
-        }
-
-        @Override
-        public void set(final int k, final long v) {
-        }
-
-        @Override
-        public void add(final int k, final long incr) {
-        }
-
-        @Override
-        public int[] toIntArray() {
-            return EMPTY_INT_ARRAY;
-        }
-    };
+    public static final IntLongMap EMPTY = new Empty();
 
     public IntLongMap(int expected) {
         super(expected, 0.75F);
@@ -273,5 +249,35 @@ public class IntLongMap extends Int2LongOpenHashMap implements Iterable<Int2Long
     @Override
     public Iterator<Entry> iterator() {
         return int2LongEntrySet().fastIterator();
+    }
+
+    private static final class Empty extends IntLongMap {
+
+        private static final int[] EMPTY_INT_ARRAY = new int[0];
+
+        public Empty() {
+            super(0);
+        }
+
+        @Override
+        public void addAll(IntLongMap map) {
+        }
+
+        @Override
+        public void setAll(IntLongMap map) {
+        }
+
+        @Override
+        public void set(final int k, final long v) {
+        }
+
+        @Override
+        public void add(final int k, final long incr) {
+        }
+
+        @Override
+        public int[] toIntArray() {
+            return EMPTY_INT_ARRAY;
+        }
     }
 }

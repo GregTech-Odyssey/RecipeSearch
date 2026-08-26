@@ -24,7 +24,7 @@ import java.util.stream.StreamSupport;
  * mutable traversal state, so one instance can only be used for a single traversal.
  */
 @SuppressWarnings("unused")
-public class RecipeSearcher<R> implements Iterator<R>, Iterable<R> {
+public final class RecipeSearcher<R> implements Iterator<R>, Iterable<R> {
 
     Predicate<R> predicate;
 

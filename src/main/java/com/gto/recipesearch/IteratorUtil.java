@@ -9,7 +9,9 @@ import java.util.function.Supplier;
  * an {@link Iterable} adapter.
  */
 @SuppressWarnings("unused")
-public class IteratorUtil {
+public final class IteratorUtil {
+
+    private IteratorUtil() {}
 
     public static <T> Iterable<T> asIterable(Iterator<T> iterator) {
         return () -> iterator;
