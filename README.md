@@ -17,7 +17,7 @@
 
 ```groovy
 repositories {
-    maven { url = 'https://maven.gtodyssey.com/releases' }
+    maven { url = 'https://gtodyssey.com/maven/releases' }
 }
 
 dependencies {
